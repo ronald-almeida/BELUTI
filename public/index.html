@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#f6f5f3">
+  <meta name="description" content="Black Friday da Monique: acesso vitalício por R$ 347,90, em pagamento único via Pix.">
+  <title>Black Friday da Monique • Checkout</title>
+  <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+  <link rel="preload" href="/assets/hotmart-sans-regular.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="/styles.css">
+  <script src="/app.js" type="module"></script>
+</head>
+<body>
+  <svg class="svg-defs" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><defs>
+    <symbol id="icon-lock" viewBox="0 0 24 24"><rect x="5" y="10" width="14" height="11" rx="3"/><path d="M8 10V7a4 4 0 0 1 8 0v3m-4 5v2"/></symbol>
+    <symbol id="icon-check" viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/></symbol>
+    <symbol id="icon-pix" viewBox="0 0 24 24"><path d="m12 1 5 5h-2l-3 3-3-3H7zm0 22-5-5h2l3-3 3 3h2zM1 12l5-5h3l3 3 3-3h3l5 5-5 5h-3l-3-3-3 3H6z" stroke="none" fill="currentColor"/></symbol>
+    <symbol id="icon-qr" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><path d="M15 21v-7h6v3h-3m3 4h-2M6.5 6.5h0m11 0h0m-11 11h0"/></symbol>
+    <symbol id="icon-copy" viewBox="0 0 24 24"><rect x="8" y="8" width="12" height="13" rx="2"/><path d="M16 8V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h3"/></symbol>
+    <symbol id="icon-shield" viewBox="0 0 24 24"><path d="m12 2 8 3v6c0 5-8 11-8 11S4 16 4 11V5z"/><path d="m8 11 3 3 5-5"/></symbol>
+  </defs></svg>
+  <main class="checkout">
+    <header class="topbar">
+      <span class="brand-word">MONIQUE<span class="brand-dot">.</span></span>
+      <span class="secure-label"><svg class="icon"><use href="#icon-lock"/></svg> Ambiente seguro</span>
+    </header>
+    <div class="checkout-content">
+      <div class="country"><span class="br-flag" aria-hidden="true">🇧🇷</span> Brasil <span>·</span> Português</div>
+      <section class="product" aria-labelledby="product-title">
+        <div class="product-image"><img src="/assets/monique-logo.png" width="600" height="174" alt="Black Friday da Monique — Vitalícia"></div>
+        <div class="product-info">
+          <h1 id="product-title">Black Friday da Monique</h1>
+          <p class="author">Autor: Elite Beluti Online</p>
+          <p class="price">R$ 347,90</p>
+          <p class="price-caption">Pagamento único via Pix</p>
+          <span class="lifetime">Acesso vitalício</span>
+        </div>
+      </section>
+
+      <form id="checkout-form">
+        <fieldset id="customer-fields">
+          <legend>Dados pessoais</legend>
+          <div class="field"><label for="email">Seu email</label><input id="email" name="email" type="email" inputmode="email" autocomplete="email" autocapitalize="none" spellcheck="false" placeholder="Digite seu email para identificar a compra" maxlength="254" required></div>
+          <div class="field"><label for="email-confirmation">Confirme seu email</label><input id="email-confirmation" name="emailConfirmation" type="email" inputmode="email" autocomplete="off" autocapitalize="none" spellcheck="false" placeholder="Digite novamente seu email" maxlength="254" required></div>
+          <div class="field"><label for="name">Nome completo</label><input id="name" name="name" autocomplete="name" placeholder="Digite seu nome completo" minlength="5" maxlength="120" required></div>
+          <div class="field-row">
+            <div class="field"><label for="document">CPF/CNPJ</label><input id="document" name="document" inputmode="numeric" autocomplete="off" placeholder="Digite seu CPF ou CNPJ" maxlength="18" required></div>
+            <div class="field"><label for="phone">Celular</label><div class="phone-field"><span class="dial-code"><small>BR</small> +55</span><input id="phone" name="phone" type="tel" inputmode="tel" autocomplete="tel-national" placeholder="(11) 96123-4567" maxlength="16" required></div></div>
+          </div>
+        </fieldset>
+        <section class="payment" aria-labelledby="payment-title">
+          <h2 id="payment-title">Escolha a forma de pagamento</h2>
+          <div class="payment-card">
+            <div class="payment-method"><span class="radio-selected" aria-hidden="true"></span><svg class="icon pix-icon"><use href="#icon-pix"/></svg><strong>Pix</strong><span class="method-note">À vista</span></div>
+            <div class="payment-content">
+              <div class="payment-actions">
+                <p class="payment-note"><svg class="icon"><use href="#icon-check"/></svg><span>Copie o código ou escaneie o QR Code no aplicativo do seu banco.</span></p>
+                <button class="button button-primary" id="generate-pix" type="submit"><svg class="icon"><use href="#icon-qr"/></svg><span>Gerar código QR</span></button>
+                <button class="button button-outline" id="open-pix" type="submit">Copiar código Pix</button>
+                <p class="payment-help">Pagamento único. Sem mensalidades.</p>
+              </div>
+              <svg class="large-qr" aria-hidden="true"><use href="#icon-qr"/></svg>
+            </div>
+          </div>
+          <p id="form-message" class="form-message" role="alert" hidden></p>
+          <details class="more-info"><summary>Mostrar mais <span aria-hidden="true">⌄</span></summary><p>Gere o código, abra o aplicativo do seu banco e escolha “Pix Copia e Cola”. Confira o valor de R$ 347,90 e os dados do recebedor antes de confirmar. Esta compra é processada pela Black Cat.</p></details>
+        </section>
+      </form>
+      <section class="purchase-details" aria-labelledby="details-title"><h2 id="details-title">Detalhes da compra</h2><div class="purchase-row"><strong>Black Friday da Monique</strong><span>R$ 347,90</span></div></section>
+      <footer><svg class="icon"><use href="#icon-shield"/></svg><span>Pagamento via Pix <span class="footer-dot">·</span> <strong>Black Cat</strong></span></footer>
+    </div>
+  </main>
+
+  <dialog id="pix-dialog" aria-labelledby="modal-title" aria-describedby="modal-description">
+    <button class="modal-close" id="close-modal" type="button" aria-label="Fechar janela">×</button>
+    <div class="modal-brand"><svg class="icon pix-icon"><use href="#icon-pix"/></svg><span>Pagamento via Pix</span></div>
+    <h2 id="modal-title">Conclua sua compra</h2>
+    <p id="modal-description">Black Friday da Monique</p>
+    <p class="modal-price">R$ 347,90</p>
+    <div id="modal-loading" class="modal-state" role="status"><span class="spinner"></span><p>Gerando seu código Pix…</p><small>Aguarde. Não feche esta página.</small></div>
+    <div id="modal-error" class="modal-state error-state" role="alert" hidden><p id="modal-error-text"></p><button type="button" class="button button-outline" id="back-to-form">Voltar ao checkout</button></div>
+    <div id="modal-payment" hidden>
+      <img id="pix-qr" class="pix-qr" width="240" height="240" alt="QR Code do pagamento Pix de R$ 347,90">
+      <p class="qr-instruction">Escaneie o QR Code ou copie o código abaixo.</p>
+      <label class="code-label" for="pix-code">Pix Copia e Cola</label>
+      <textarea id="pix-code" rows="2" readonly spellcheck="false" aria-label="Código Pix para copiar"></textarea>
+      <button type="button" class="button button-primary" id="copy-pix"><svg class="icon"><use href="#icon-copy"/></svg><span>Copiar código Pix</span></button>
+      <p id="copy-feedback" class="copy-feedback" role="status"></p>
+      <div class="waiting-status" id="waiting-status"><span></span> Aguardando pagamento</div>
+      <p id="expiry" class="expiry"></p>
+      <button type="button" class="check-payment" id="check-payment">Já paguei · Verificar pagamento</button>
+      <p id="status-feedback" class="status-feedback" role="status"></p>
+    </div>
+    <div id="modal-success" class="modal-state" hidden><div class="success-icon"><svg class="icon"><use href="#icon-check"/></svg></div><h3>Pagamento confirmado!</h3><p>Guarde o comprovante do seu banco. Para orientações de acesso, entre em contato com a equipe do produto.</p></div>
+    <p class="modal-footer"><svg class="icon"><use href="#icon-lock"/></svg> Pagamento processado pela Black Cat</p>
+  </dialog>
+</body>
+</html>
