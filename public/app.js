@@ -138,7 +138,12 @@ async function checkStatus(manual) {
     if (!response.ok) throw new Error(result.message);
     status = result.status;
     if (status === 'PAID') { setView('success'); storage.set(storageKey, { ...payment, status }); }
-    else if (['CANCELLED', 'REFUNDED'].includes(status)) {
+    else if (status === 'UNDER_REVIEW') {
+      $('waiting-status').textContent = 'Pagamento em análise';
+      $('copy-pix').disabled = true;
+      $('check-payment').hidden = true;
+      $('status-feedback').textContent = 'Entre em contato com a equipe do produto.';
+    } else if (['CANCELLED', 'REFUNDED'].includes(status)) {
       $('waiting-status').textContent = status === 'REFUNDED' ? 'Pagamento estornado' : 'Código cancelado ou expirado';
       $('copy-pix').disabled = true; $('check-payment').hidden = true;
       $('status-feedback').textContent = 'Fale com a equipe do produto antes de fazer um novo pagamento.';
