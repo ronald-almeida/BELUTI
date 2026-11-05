@@ -5,6 +5,7 @@ import paymentStatus from '../api/payment-status.js';
 import { AMOUNT, signPayment, verifyPayment, validDocument } from '../lib/payment.js';
 const originalFetch = globalThis.fetch;
 beforeEach(() => {
+  process.env.PAYSHARK_API_KEY = 'shark-secret';
   process.env.QUANTUMPAY_API_KEY = 'test-public';
   process.env.QUANTUMPAY_API_SECRET = 'test-secret';
 });
@@ -19,7 +20,13 @@ function mockQuantum(operation) {
     return operation(url, options);
   };
 }
-afterEach(() => { globalThis.fetch = originalFetch; delete process.env.BLACKCAT_API_KEY; delete process.env.QUANTUMPAY_API_KEY; delete process.env.QUANTUMPAY_API_SECRET; });
+afterEach(() => { delete process.env.PAYSHARK_API_KEY; globalThis.fetch = originalFetch; delete process.env.BLACKCAT_API_KEY; delete process.env.QUANTUMPAY_API_KEY; delete process.env.QUANTUMPAY_API_SECRET; });
+function mockShark(operation) {
+  globalThis.fetch = async (url, options) => {
+    assert.equal(options.headers.Authorization, 'Bearer shark-secret');
+    return operation(url, options);
+  };
+}
 function res() { return { headers: {}, statusCode: 200, setHeader(k, v) { this.headers[k] = v; }, status(code) { this.statusCode = code; return this; }, json(data) { this.data = data; return this; } }; }
 function req(body, method = 'POST') { return { method, headers: { 'content-type': 'application/json', host: 'checkout.example', origin: 'https://checkout.example' }, body }; }
 const buyer = { name: 'Cliente de Teste', email: 'cliente@example.com', emailConfirmation: 'cliente@example.com', document: '52998224725', phone: '11999999999' };
@@ -32,7 +39,7 @@ test('validates CPF and CNPJ check digits', () => {
   assert.equal(validDocument('52998224726'), false);
 });
 test('missing API key never creates a charge', async () => {
-  delete process.env.QUANTUMPAY_API_KEY;
+  delete process.env.PAYSHARK_API_KEY;
   let called = false; globalThis.fetch = async () => { called = true; };
   const r = res(); await createPix(req(buyer), r);
   assert.equal(r.statusCode, 503); assert.equal(called, false);
@@ -40,24 +47,27 @@ test('missing API key never creates a charge', async () => {
 test('price and product are fixed server-side and response excludes customer and key', async () => {
 
   let payload;
-  mockQuantum(async (url, options) => {
-    assert.equal(url, 'https://api.quantumpay.com.br/api/v1/pix/in/qrcode');
+  mockShark(async (url, options) => {
+    assert.equal(url, 'https://api.gatewaypayshark.com.br/v1/payment');
     payload = JSON.parse(options.body);
-    assert.equal(payload.customer.documentType, 'cpf');
-    assert.equal(payload.customer.document, buyer.document);
-    return Response.json({ success: true, data: { id: 'TXN-test', status: 'pending', pix: { emv: pixCode } } }, { status: 201 });
+    assert.equal(payload.method, 'PIX');
+    assert.equal(payload.items[0].type, 'DIGITAL');
+    assert.equal(payload.payer.taxId, buyer.document);
+    return Response.json({ id: 'TXN-test', amount: 34790, currency: 'BRL', method: 'PIX', status: 'PENDING', data: { copypaste: pixCode } }, { status: 201 });
   });
   const r = res(); await createPix(req({ ...buyer, amount: 1, product: 'tampered' }), r);
   assert.equal(r.statusCode, 200);
-  assert.equal(payload.amountInCents, 34790);
-  assert.deepEqual(Object.keys(payload).sort(), ['amountInCents', 'customer', 'description']);
+  assert.equal(payload.amount, 34790);
+  assert.equal(payload.items[0].price, 34790);
+  assert.equal(payload.notificationUrl, undefined);
+  assert.equal(payload.delivery, undefined);
   assert.equal(payload.description, 'Black Friday da Monique');
   assert.match(r.data.qrImage, /^data:image\/png;base64,/);
   assert.equal(r.data.pixCode, pixCode);
   assert.equal(r.headers['Cache-Control'], 'no-store');
   const output = JSON.stringify(r.data);
-  assert.ok(!output.includes(buyer.document) && !output.includes(buyer.email) && !output.includes('test-secret'));
-  assert.equal(verifyPayment(r.data.token.slice(3), 'test-secret').id, 'TXN-test');
+  assert.ok(!output.includes(buyer.document) && !output.includes(buyer.email) && !output.includes('shark-secret'));
+  assert.equal(verifyPayment(r.data.token.slice(3), 'shark-secret').id, 'TXN-test');
 });
 test('invalid customer and foreign origins do not reach the provider', async () => {
   process.env.BLACKCAT_API_KEY = 'test-key'; let called = false;
@@ -70,13 +80,13 @@ test('invalid customer and foreign origins do not reach the provider', async () 
 });
 test('ambiguous failures are never automatically retried', async () => {
   process.env.BLACKCAT_API_KEY = 'test-key'; let calls = 0;
-  mockQuantum(async () => { calls++; throw new Error('timeout'); });
+  mockShark(async () => { calls++; throw new Error('timeout'); });
   const r = res(); await createPix(req(buyer), r);
   assert.equal(calls, 1); assert.equal(r.data.code, 'PAYMENT_UNCERTAIN');
 });
 test('wrong provider amount is not displayed as a valid payment', async () => {
   process.env.BLACKCAT_API_KEY = 'test-key';
-  mockQuantum(async () => Response.json({ success: true, data: { amountInCents: 1, id: 'TXN-test', pix: { emv: pixCode } } }));
+  mockShark(async () => Response.json({ amount: 1, id: 'TXN-test', status: 'PENDING', method: 'PIX', currency: 'BRL', data: { copypaste: pixCode } }));
   const r = res(); await createPix(req(buyer), r);
   assert.equal(r.data.code, 'PAYMENT_UNCERTAIN');
 });
@@ -109,11 +119,16 @@ test('QuantumPay status uses the signed transaction and checks returned amount',
   }
 });
 
-test('integration rejection is distinct from payer validation and excludes upstream details', async () => {
-  mockQuantum(async () => Response.json({ message: 'Erro de integração ' + buyer.email }, { status: 422 }));
-  const result = res();
-  await createPix(req(buyer), result);
-  assert.equal(result.data.code, 'PROVIDER_INTEGRATION');
-  assert.ok(result.data.reference);
-  assert.ok(!JSON.stringify(result.data).includes(buyer.email));
+test('PayShark verifies the signed ID, price and method before confirming payment', async () => {
+  const token = 'ps.' + signPayment('TXN-test', 'shark-secret');
+  for (const amount of [34790, 1]) {
+    mockShark(async url => {
+      assert.equal(url, 'https://api.gatewaypayshark.com.br/v1/payment/TXN-test');
+      return Response.json({ id: 'TXN-test', currency: 'BRL', method: 'PIX', amount, status: 'PAID' });
+    });
+    const result = res();
+    await paymentStatus(req({ token }), result);
+    assert.equal(result.statusCode, amount === 34790 ? 200 : 502);
+    if (amount === 34790) assert.equal(result.data.status, 'PAID');
+  }
 });

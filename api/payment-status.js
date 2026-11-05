@@ -1,3 +1,4 @@
+import { payShark, paymentKey, isExpectedPix } from '../lib/payshark.js';
 import { quantumRequest, quantumToken } from '../lib/quantumpay.js';
 import { AMOUNT, blackcat, sameOrigin, send, verifyPayment } from '../lib/payment.js';
 
@@ -10,13 +11,27 @@ export default async function handler(req, res) {
     token = body?.token;
   } catch { return send(res, 400, { message: 'Solicitação inválida.' }); }
   const quantum = typeof token === 'string' && token.startsWith('qp.');
-  const secret = quantum ? process.env.QUANTUMPAY_API_SECRET : process.env.BLACKCAT_API_KEY;
+  const shark = typeof token === 'string' && token.startsWith('ps.');
+  const secret = shark ? paymentKey() : quantum ? process.env.QUANTUMPAY_API_SECRET : process.env.BLACKCAT_API_KEY;
   if (!secret) return send(res, 503, { message: 'Consulta temporariamente indisponível.' });
   let payment;
   try {
-    payment = verifyPayment(quantum ? token.slice(3) : token, secret);
+    payment = verifyPayment(shark || quantum ? token.slice(3) : token, secret);
   } catch { return send(res, 403, { message: 'Esta consulta expirou. Confira o pagamento com a equipe do produto.' }); }
   try {
+    if (shark) {
+      const response = await payShark('/payment/' + encodeURIComponent(payment.id));
+      const data = await response.json();
+      if (!response.ok || data?.id !== payment.id || !isExpectedPix(data)) throw new Error('Invalid Pix');
+      const statuses = new Map([
+        ['PENDING', 'PENDING'], ['PROCESSING', 'PENDING'], ['PAID', 'PAID'],
+        ['REFUSED', 'CANCELLED'], ['REFUNDED', 'REFUNDED'], ['CHARGEDBACK', 'REFUNDED'],
+        ['MED', 'UNDER_REVIEW']
+      ]);
+      const status = statuses.get(data.status);
+      if (!status) throw new Error('Unknown status');
+      return send(res, 200, { status });
+    }
     if (quantum) {
       const accessToken = await quantumToken();
       const response = await quantumRequest(accessToken, '/api/v1/transactions/' + encodeURIComponent(payment.id));
