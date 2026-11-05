@@ -1,6 +1,29 @@
+import { randomUUID } from 'node:crypto';
 import { quantumConfigured, quantumRequest, quantumToken } from '../lib/quantumpay.js';
 import QRCode from 'qrcode';
 import { AMOUNT, PRODUCT, sameOrigin, send, signPayment, validateCustomer } from '../lib/payment.js';
+
+function handleRejectedPix(res, status, result) {
+  const reference = randomUUID().slice(0, 8);
+  // Classify upstream text locally; never log the raw response or buyer data.
+  const reason = [result?.code, result?.error, result?.message]
+    .filter(value => typeof value === 'string').join(' ')
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+  const integration = /integracao|integration|acquirer|adquirente/.test(reason);
+  const field = ['cpf', 'cnpj', 'document', 'phone', 'email', 'telefone']
+    .find(name => reason.includes(name));
+  const category = integration ? 'integration' : (field || 'unspecified');
+  console.warn('QuantumPay Pix IN rejected', { status, category, reference });
+
+  let message = 'A operadora recusou a solicitação de Pix. Fale com a equipe do produto.';
+  if (integration) message = 'A operadora informou um erro de integração. Fale com a equipe do produto.';
+  else if (field) message = 'A operadora recusou os dados do pagador. Confira o documento, o email e o telefone.';
+  return send(res, 400, {
+    code: integration ? 'PROVIDER_INTEGRATION' : 'INVALID_PAYMENT',
+    reference,
+    message: message + ' Referência: ' + reference + '.'
+  });
+}
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') { res.setHeader('Allow', 'POST'); return send(res, 405, { message: 'Método não permitido.' }); }
@@ -37,7 +60,7 @@ export default async function handler(req, res) {
     const response = await quantumRequest(accessToken, '/api/v1/pix/in/qrcode', { method: 'POST', body: JSON.stringify(payload) });
     const result = await response.json().catch(() => null);
     if (!response.ok || result?.success !== true) {
-      if ([400, 422].includes(response.status)) return send(res, 400, { code: 'INVALID_PAYMENT', message: 'Não foi possível gerar o Pix. Confira seus dados e tente novamente.' });
+      if ([400, 422].includes(response.status)) return handleRejectedPix(res, response.status, result);
       if ([401, 403].includes(response.status)) return send(res, 503, { code: 'PAYMENT_UNAVAILABLE', message: 'Pagamento temporariamente indisponível. Fale com a equipe do produto.' });
       if (response.status === 429) return send(res, 429, { code: 'RATE_LIMIT', message: 'Muitas solicitações. Aguarde um minuto e tente novamente.' });
       return send(res, 502, { code: 'PAYMENT_UNCERTAIN', message: 'A operadora não confirmou a geração. Para evitar cobranças duplicadas, confira com a equipe do produto antes de tentar novamente.' });

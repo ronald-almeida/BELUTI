@@ -108,3 +108,12 @@ test('QuantumPay status uses the signed transaction and checks returned amount',
     if (expected === 200) assert.equal(result.data.status, 'PAID');
   }
 });
+
+test('integration rejection is distinct from payer validation and excludes upstream details', async () => {
+  mockQuantum(async () => Response.json({ message: 'Erro de integração ' + buyer.email }, { status: 422 }));
+  const result = res();
+  await createPix(req(buyer), result);
+  assert.equal(result.data.code, 'PROVIDER_INTEGRATION');
+  assert.ok(result.data.reference);
+  assert.ok(!JSON.stringify(result.data).includes(buyer.email));
+});
