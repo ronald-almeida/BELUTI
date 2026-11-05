@@ -5,15 +5,29 @@ import { AMOUNT, PRODUCT, sameOrigin, send, signPayment, validateCustomer } from
 
 function handleRejectedPix(res, status, result) {
   const reference = randomUUID().slice(0, 8);
-  // Classify upstream text locally; never log the raw response or buyer data.
-  const reason = [result?.code, result?.error, result?.message]
-    .filter(value => typeof value === 'string').join(' ')
-    .normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+  // Diagnostic logs contain only recognized API vocabulary, including nested errors.
+  const vocabulary = new Set(('amount amountincents valor minimo maximo centavos limite email telefone phone cpf cnpj document documenttype nome name customer pagador dados invalid invalid_request invalid_parameter validation_error invalidos invalido required obrigatorio obrigatoria ausente missing field campo fields items item quantity quantidade description descricao title tangible postbackurl webhook callback url api pix in cash cashin cash_in payment qrcode transaction transacao integracao integration merchant estabelecimento empresa conta company account adquirente acquirer provedor provider gateway banco bank configurado configurada configuracao configured enabled habilitado habilitada desabilitado desabilitada ativo ativa active inactive inativo inativa bloqueado bloqueada blocked unauthorized forbidden permission permissao allowed permitido ip whitelist credencial credentials chave key token expired expirado indisponivel unavailable falha failed failure error erro internal interno criar gerar creation processamento processar processado processing rejected recusada saldo balance insufficient insuficiente pendente pending onboarding kyc aprovado approved validacao validado nao not no sem encontrado encontrada found disponivel rota route pix_in cash_in_disabled').split(' '));
+  const fragments = [];
+  function collect(value, depth = 0) {
+    if (depth > 5 || fragments.length >= 120) return;
+    if (typeof value === 'string') fragments.push(value.slice(0, 500));
+    else if (value && typeof value === 'object') {
+      for (const [key, child] of Object.entries(value).slice(0, 20)) {
+        fragments.push(key);
+        collect(child, depth + 1);
+      }
+    }
+  }
+  collect(result);
+  const reason = fragments.join(' ').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+  const hints = [...new Set((reason.match(/[a-z_]+/g) || []).filter(word => vocabulary.has(word)))].slice(0, 45);
+  const rawCode = [result?.code, result?.error?.code, result?.error].find(value =>
+    typeof value === 'string' && /^[A-Z]{2,16}(?:_[A-Z]{2,16}){1,5}$/.test(value));
   const integration = /integracao|integration|acquirer|adquirente/.test(reason);
   const field = ['cpf', 'cnpj', 'document', 'phone', 'email', 'telefone']
     .find(name => reason.includes(name));
   const category = integration ? 'integration' : (field || 'unspecified');
-  console.warn('QuantumPay Pix IN rejected', { status, category, reference });
+  console.warn('QuantumPay Pix IN rejected', { status, category, reference, hints, providerCode: rawCode });
 
   let message = 'A operadora recusou a solicitação de Pix. Fale com a equipe do produto.';
   if (integration) message = 'A operadora informou um erro de integração. Fale com a equipe do produto.';
