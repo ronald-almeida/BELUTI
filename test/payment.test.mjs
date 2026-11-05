@@ -10,7 +10,7 @@ beforeEach(() => {
 });
 function mockQuantum(operation) {
   globalThis.fetch = async (url, options) => {
-    if (url === 'https://api.quantumpay.com.br/api/auth') {
+    if (url === 'https://api.quantumpay.com.br/auth') {
       assert.equal(options.method, 'POST');
       assert.equal(options.headers.Authorization, 'Basic ' + Buffer.from('test-public:test-secret').toString('base64'));
       return Response.json({ success: true, token: 'test-bearer', expiresIn: 1000 });
@@ -41,7 +41,7 @@ test('price and product are fixed server-side and response excludes customer and
 
   let payload;
   mockQuantum(async (url, options) => {
-    assert.equal(url, 'https://api.quantumpay.com.br/api/v1/pix/in/qrcode');
+    assert.equal(url, 'https://api.quantumpay.com.br/v1/pix/in/qrcode');
     payload = JSON.parse(options.body);
     assert.equal(payload.customer.documentType, 'cpf');
     assert.equal(payload.customer.document, buyer.document);

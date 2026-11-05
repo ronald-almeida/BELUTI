@@ -71,7 +71,7 @@ export default async function handler(req, res) {
   }
   // Never retry a charge creation: a timeout may occur after the provider created it.
   try {
-    const response = await quantumRequest(accessToken, '/api/v1/pix/in/qrcode', { method: 'POST', body: JSON.stringify(payload) });
+    const response = await quantumRequest(accessToken, '/v1/pix/in/qrcode', { method: 'POST', body: JSON.stringify(payload) });
     const result = await response.json().catch(() => null);
     if (!response.ok || result?.success !== true) {
       if ([400, 422].includes(response.status)) return handleRejectedPix(res, response.status, result);

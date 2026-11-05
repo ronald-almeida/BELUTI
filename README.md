@@ -10,7 +10,7 @@ Cadastre `QUANTUMPAY_API_KEY` e `QUANTUMPAY_API_SECRET` em **Settings → Enviro
 
 ## Integração
 
-- `POST /api/create-pix`: valida os dados, define R$ 347,90 no servidor e chama `POST /api/v1/pix/in/qrcode` com um token Bearer obtido em `POST https://api.quantumpay.com.br/api/auth`.
+- `POST /api/create-pix`: valida os dados, define R$ 347,90 no servidor e chama `POST /v1/pix/in/qrcode` com um token Bearer obtido em `POST https://api.quantumpay.com.br/auth`.
 - `POST /api/payment-status`: consulta somente a transação identificada por um token HMAC, usando o ID assinado na URL da consulta e verificando o valor e o ID quando retornados. Mantenha BLACKCAT_API_KEY para consultar QR Codes antigos já abertos.
 - QR Code gerado localmente a partir do Pix Copia e Cola devolvido pela QuantumPay.
 - Sem banco de dados, webhook ou serviço externo de QR. O provedor de pagamento mantém os registros de venda na própria plataforma.
