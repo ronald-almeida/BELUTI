@@ -10,7 +10,7 @@ beforeEach(() => {
 });
 function mockQuantum(operation) {
   globalThis.fetch = async (url, options) => {
-    if (url === 'https://api.quantumpay.com.br/auth') {
+    if (url === 'https://api.quantumpay.com.br/api/auth') {
       assert.equal(options.method, 'POST');
       assert.equal(options.headers.Authorization, 'Basic ' + Buffer.from('test-public:test-secret').toString('base64'));
       return Response.json({ success: true, token: 'test-bearer', expiresIn: 1000 });
@@ -41,7 +41,7 @@ test('price and product are fixed server-side and response excludes customer and
 
   let payload;
   mockQuantum(async (url, options) => {
-    assert.equal(url, 'https://api.quantumpay.com.br/v1/pix/in/qrcode');
+    assert.equal(url, 'https://api.quantumpay.com.br/api/v1/pix/in/qrcode');
     payload = JSON.parse(options.body);
     assert.equal(payload.customer.documentType, 'cpf');
     assert.equal(payload.customer.document, buyer.document);
@@ -50,8 +50,8 @@ test('price and product are fixed server-side and response excludes customer and
   const r = res(); await createPix(req({ ...buyer, amount: 1, product: 'tampered' }), r);
   assert.equal(r.statusCode, 200);
   assert.equal(payload.amountInCents, 34790);
-  assert.equal(payload.items[0].amountInCents, 34790);
-  assert.equal(payload.items[0].title, 'Black Friday da Monique');
+  assert.deepEqual(Object.keys(payload).sort(), ['amountInCents', 'customer', 'description']);
+  assert.equal(payload.description, 'Black Friday da Monique');
   assert.match(r.data.qrImage, /^data:image\/png;base64,/);
   assert.equal(r.data.pixCode, pixCode);
   assert.equal(r.headers['Cache-Control'], 'no-store');
